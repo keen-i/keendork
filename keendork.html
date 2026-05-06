@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keen-Dork · Severity Edition</title>
+<link rel="icon" type="image/jpeg" href="https://pbs.twimg.com/profile_images/2048606878977179648/JyJA2_52_400x400.jpg" />
+<style>
+  /* ----- RESET & BASE ----- */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0b0c14;
+    color: #c8ccd0;
+    font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ----- GALAXY BACKGROUND CANVAS ----- */
+  #galaxyCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ----- TYPOGRAPHY ----- */
+  h1, h2, h3 { font-weight: 600; letter-spacing: -0.3px; }
+  a { text-decoration: none; color: inherit; }
+
+  /* ----- LAYOUT (above canvas) ----- */
+  .app-wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 3rem;
+  }
+
+  /* ----- HEADER / BRANDING ----- */
+  .brand-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.8rem;
+    flex-wrap: wrap;
+  }
+  .brand-bar img {
+    height: 52px; width: 52px;
+    border-radius: 14px; object-fit: cover;
+    border: 2px solid #3c4049; background: #25282e;
+  }
+  .brand-bar h1 {
+    font-size: 2rem; font-weight: 700; color: #e2e4e7; letter-spacing: -0.5px;
+  }
+  .brand-bar h1 span { color: #f7a154; font-weight: 400; }
+  .brand-bar .author {
+    margin-left: auto; font-size: 0.85rem; color: #7b818c;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .brand-bar .author a { color: #f7a154; font-weight: 600; transition: color 0.2s; }
+  .brand-bar .author a:hover { color: #e28c3e; }
+
+  /* ----- TARGET INPUT ----- */
+  .target-card {
+    background: rgba(33,36,42,0.85); backdrop-filter: blur(8px);
+    border: 1px solid #2e3239; border-radius: 16px; padding: 1.5rem 2rem;
+    margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;
+    flex-wrap: wrap; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .target-card label {
+    font-size: 0.9rem; font-weight: 600; color: #959da6;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .target-card input {
+    flex: 1; min-width: 240px; background: #181a1f; border: 1px solid #363b44;
+    border-radius: 12px; padding: 0.75rem 1.2rem; font-size: 1rem; color: #e2e4e7;
+    outline: none; transition: border 0.2s, box-shadow 0.2s;
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  }
+  .target-card input:focus { border-color: #f7a154; box-shadow: 0 0 0 3px rgba(247,161,84,0.12); }
+  .target-card button {
+    background: #f7a154; color: #181a1f; border: none; border-radius: 12px;
+    padding: 0.75rem 2rem; font-weight: 700; font-size: 0.95rem; cursor: pointer;
+    transition: background 0.2s, transform 0.1s; letter-spacing: 0.2px;
+  }
+  .target-card button:hover { background: #e28c3e; transform: translateY(-1px); }
+
+  /* ----- QUOTE BAND ----- */
+  .quote-band {
+    text-align: center; margin-bottom: 1.8rem; font-style: italic;
+    color: #6b7280; font-size: 0.95rem; padding: 0.8rem 1rem;
+    background: rgba(30,33,39,0.8); border-radius: 12px;
+    border-left: 4px solid #f7a154; backdrop-filter: blur(4px);
+  }
+  .quote-band strong { color: #a0a6b0; font-weight: 600; }
+
+  /* ----- SEVERITY HEADINGS ----- */
+  .sev-head {
+    font-size: 1.15rem; font-weight: 700; color: #d4d6db;
+    margin: 2.2rem 0 1rem; padding-bottom: 0.5rem;
+    border-bottom: 2px solid #2c3038; display: flex; align-items: center;
+    gap: 0.5rem; letter-spacing: 0.2px;
+  }
+  .sev-head::before {
+    content: ''; display: inline-block; width: 12px; height: 12px;
+    border-radius: 3px; margin-right: 6px;
+  }
+  .sev-critical::before { background: #f85149; }
+  .sev-high::before { background: #f0883e; }
+  .sev-medium::before { background: #f7a154; }
+  .sev-low::before { background: #58a6ff; }
+  .sev-info::before { background: #8b949e; }
+
+  /* ----- DORK GRID ----- */
+  .dork-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem; margin-bottom: 0.8rem;
+  }
+
+  /* ----- DORK CARD ----- */
+  .dork-card {
+    background: rgba(33,36,42,0.85); backdrop-filter: blur(6px);
+    border: 1px solid #2c3038; border-radius: 14px; padding: 1.2rem 1.3rem;
+    transition: all 0.25s; cursor: pointer; display: flex;
+    flex-direction: column; gap: 0.6rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; overflow: hidden;
+  }
+  .dork-card:hover {
+    border-color: #f7a154; box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+    transform: translateY(-2px); background: rgba(37,40,48,0.9);
+  }
+  .dork-card .dork-title {
+    font-weight: 700; font-size: 1rem; color: #e2e4e7;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .dork-card .dork-title .icon-circle {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: #2b2f36; display: flex; align-items: center;
+    justify-content: center; font-size: 1.1rem;
+  }
+  .dork-card .dork-query {
+    font-size: 0.78rem; color: #889099;
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    word-break: break-all; line-height: 1.5;
+    max-height: 48px; overflow: hidden; position: relative;
+  }
+  .dork-card .dork-query::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 18px;
+    background: linear-gradient(transparent, rgba(33,36,42,0.85)); pointer-events: none;
+  }
+  .dork-card:hover .dork-query::after { background: linear-gradient(transparent, rgba(37,40,48,0.9)); }
+  .dork-card .platform-badges {
+    display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.2rem;
+  }
+  .dork-card .badge {
+    font-size: 0.7rem; font-weight: 600; padding: 0.25rem 0.6rem;
+    border-radius: 6px; letter-spacing: 0.3px; text-transform: uppercase;
+  }
+  .badge-google { background: #1e3a5f; color: #8ab4f8; }
+  .badge-github { background: #1f2a23; color: #7ee787; }
+  .badge-shodan { background: #3d1e1e; color: #f77878; }
+  .badge-wayback { background: #2e2417; color: #f7a154; }
+  .badge-crtsh { background: #1f2430; color: #a0b0d0; }
+
+  /* ----- BUTTONS ROW ----- */
+  .btn-row {
+    display: flex; gap: 0.6rem; flex-wrap: wrap;
+    margin-top: 2.5rem; margin-bottom: 1rem;
+  }
+  .btn-row a {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: rgba(37,40,46,0.8); backdrop-filter: blur(4px);
+    border: 1px solid #363b44; border-radius: 10px;
+    padding: 0.55rem 1.2rem; font-size: 0.85rem; font-weight: 600;
+    color: #c8ccd0; transition: all 0.2s; letter-spacing: 0.2px;
+  }
+  .btn-row a:hover { border-color: #f7a154; color: #f7a154; background: #1e2127; }
+  .btn-row a img { height: 18px; width: 18px; border-radius: 4px; object-fit: contain; }
+
+  /* ----- FOOTER ----- */
+  .footer-bar {
+    text-align: center; margin-top: 2.5rem; padding-top: 1.5rem;
+    border-top: 1px solid #2c3038; color: #5f6670; font-size: 0.82rem;
+  }
+  .footer-bar a { color: #f7a154; font-weight: 600; }
+
+  /* ----- RESPONSIVE ----- */
+  @media (max-width: 768px) {
+    .app-wrap { padding: 1rem 1rem 2rem; }
+    .brand-bar h1 { font-size: 1.4rem; }
+    .target-card { flex-direction: column; align-items: stretch; }
+    .dork-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<!-- Galaxy background -->
+<canvas id="galaxyCanvas"></canvas>
+
+<div class="app-wrap">
+
+  <!-- ========== BRANDING ========== -->
+  <div class="brand-bar">
+    <img src="https://pbs.twimg.com/profile_images/2048606878977179648/JyJA2_52_400x400.jpg" alt="DorkPhantom logo" />
+    <h1>Keen<span>Dork</span></h1>
+    <div class="author">
+      crafted by <a href="https://github.com/keen-i" target="_blank" rel="noopener">keen-i</a> · severity edition
+    </div>
+  </div>
+
+  <!-- ========== TARGET INPUT ========== -->
+  <div class="target-card">
+    <label for="targetDomain">🎯 Target</label>
+    <input type="text" id="targetDomain" placeholder="example.com" value="target.com" />
+    <button id="applyTargetBtn">Apply &amp; Refresh Dorks</button>
+  </div>
+
+  <!-- ========== QUOTE ========== -->
+  <div class="quote-band">
+    <strong>“I am the one who dorks.”</strong> — Heisenberg &nbsp;|&nbsp;
+    <strong>“A dork is a ladder.”</strong> — Littlefinger &nbsp;|&nbsp;
+    <strong>“Recon is everything.”</strong> — Tony Soprano
+  </div>
+
+  <!-- ========== DORKS CONTAINER ========== -->
+  <div id="dorksContainer"></div>
+
+  <!-- ========== QUICK‑ACCESS BUTTONS ========== -->
+  <div class="btn-row" id="quickAccessRow"></div>
+
+  <!-- ========== FOOTER ========== -->
+  <div class="footer-bar">
+    ⚡ DorkPhantom v2.0 — <strong>severity‑based dorks</strong> — hand‑picked from GHDB, GhostDork &amp; community — use only on authorised targets
+  </div>
+</div>
+
+<script>
+(function() {
+  /* ---------- DOM refs ---------- */
+  const targetInput = document.getElementById('targetDomain');
+  const applyBtn = document.getElementById('applyTargetBtn');
+  const dorksContainer = document.getElementById('dorksContainer');
+  const quickAccessRow = document.getElementById('quickAccessRow');
+  const esc = encodeURIComponent;
+function sanitizeDomain(raw) {
+  if (!raw) return 'target.com';
+  // Remove protocol, path, and any character not allowed in a hostname.
+  let clean = raw.replace(/^https?:\/\//i, '')       // strip http(s)://
+                 .replace(/\/.*$/, '')               // strip path
+                 .replace(/[^a-zA-Z0-9.\-_]/g, ''); // only hostname chars
+  return clean || 'target.com';
+}
+  /* ---------- GALAXY BACKGROUND (animated starfield) ---------- */
+  const canvas = document.getElementById('galaxyCanvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  const STAR_COUNT = 350;
+  const MAX_SPEED = 0.3;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  // Create stars
+  function initStars() {
+    stars = [];
+    for (let i = 0; i < STAR_COUNT; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 2.5 + 0.5,
+        opacity: Math.random() * 0.8 + 0.2,
+        speed: Math.random() * MAX_SPEED + 0.1,
+      });
+    }
+  }
+  initStars();
+
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // subtle nebula gradient
+    const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width*0.8);
+    gradient.addColorStop(0, 'rgba(20, 10, 40, 0.3)');
+    gradient.addColorStop(1, 'rgba(5, 5, 15, 0.6)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // draw stars
+    for (let star of stars) {
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.radius, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+      ctx.fill();
+    }
+  }
+
+  function animateStars() {
+    for (let star of stars) {
+      star.y += star.speed;
+      if (star.y > canvas.height + 5) {
+        star.y = -5;
+        star.x = Math.random() * canvas.width;
+      }
+    }
+    drawStars();
+    requestAnimationFrame(animateStars);
+  }
+  animateStars();
+
+  /* ---------- DORKS DATABASE (severity-based, combined high-value queries) ---------- */
+  const DORKS = {
+    critical: [
+      {
+        title: '.env & Secrets Dump',
+        query: 'site:{TARGET} (ext:env | inurl:".env.production" | inurl:".env.local" | inurl:".env.backup" | inurl:".env.bak" | inurl:".env~" | inurl:".env.old" | inurl:".env.dev" | inurl:".env.staging" | inurl:".env.test" | inurl:".env.example") (intext:"DB_PASSWORD" | intext:"SECRET_KEY" | intext:"API_KEY" | intext:"APP_SECRET" | intext:"AWS_ACCESS_KEY_ID" | intext:"REDIS_PASSWORD" | intext:"MONGODB_URI" | intext:"JWT_SECRET" | intext:"ENCRYPTION_KEY" | intext:"PRIVATE_KEY") -github',
+        icon: '⚙️', platforms: ['google']
+      },
+      {
+        title: 'Cloud Secrets (AWS, Azure, GCP)',
+        query: 'site:{TARGET} (ext:env | ext:yml | ext:json | ext:txt) ("AKIA" | "aws_secret_access_key" | "AZURE_CLIENT_SECRET" | "AZURE_STORAGE_KEY" | "gcloud" "private_key" | "google_cloud" "private_key" | "AIza" "api_key")',
+        icon: '☁️', platforms: ['google']
+      },
+      {
+        title: 'Service API Keys (Slack, Stripe, Twilio, SendGrid, GitHub & more)',
+        query: 'site:{TARGET} (ext:env | ext:yml | ext:json | ext:js | ext:py) ("xoxb-" | "xoxa-" | "xoxp-" | "sk_live_" | "sk_test_" | "rk_live_" | "TWILIO_AUTH_TOKEN" | "SG." | "mailgun_api_key" | "ghp_" | "ghs_" | "gho_" | "glpat-" | "HEROKU_API_KEY" | "FIREBASE_SERVER_KEY" | "OPENAI_API_KEY" | "sk-" "api" | "shopify_access_token" | "PAYPAL_SECRET" | "ALGOLIA_ADMIN_KEY" | "MAPBOX_SECRET_TOKEN" | "DATADOG_API_KEY" | "SENTRY_DSN" | "AUTH0_CLIENT_SECRET" | "DISCORD_TOKEN")',
+        icon: '🔑', platforms: ['google']
+      },
+      {
+        title: 'Private Keys & Certificates',
+        query: 'site:{TARGET} ("-----BEGIN RSA PRIVATE KEY-----" | "-----BEGIN OPENSSH PRIVATE KEY-----" | "-----BEGIN EC PRIVATE KEY-----" | "-----BEGIN DSA PRIVATE KEY-----" | "-----BEGIN PGP PRIVATE KEY BLOCK-----" | "-----BEGIN PRIVATE KEY-----" | ext:pem "PRIVATE KEY" | ext:key "PRIVATE KEY" | inurl:"/id_rsa" | intitle:"index of" "id_rsa")',
+        icon: '🔐', platforms: ['google']
+      },
+      {
+        title: 'Database Credentials in URLs / Configs',
+        query: 'site:{TARGET} ("jdbc:mysql://" | "jdbc:postgresql://" | "jdbc:sqlserver://" | "mysql://" | "postgresql://" | "mongodb+srv://" | "redis://:password@" | "amqp://" | "cassandra" "password" | "elasticsearch" "password") -github',
+        icon: '🗄️', platforms: ['google']
+      },
+      {
+        title: 'Hardcoded Credentials in Source',
+        query: 'site:{TARGET} (ext:php "define(\'DB_PASSWORD\'" | ext:php "$password =" | ext:py "password =" "secret =" | ext:rb "password:" | ext:ini "password" | ext:cfg "password" | ext:conf "password" | ext:properties "password" | ext:json "client_secret" | ext:json "private_key" | ext:json "access_token" | ext:js "api_key =" | ext:js "Authorization: Bearer" | ext:js "x-api-key:")',
+        icon: '👨‍💻', platforms: ['google']
+      },
+      {
+        title: 'Exposed Config Backups (wp-config, settings.py, web.config)',
+        query: 'site:{TARGET} (inurl:"wp-config.php.bak" | inurl:"wp-config.php~" | inurl:"wp-config.php.old" | inurl:"settings.py" "SECRET_KEY" | inurl:"application.yml" "password" | inurl:"database.yml" "password" | inurl:"config.php" "password" | inurl:"config.json" ("api_key" | "secret") | inurl:"parameters.yml" "password" | inurl:"secrets.yml" | inurl:"credentials.json" | inurl:".htpasswd" | inurl:".htaccess" "AuthUserFile")',
+        icon: '🧩', platforms: ['google']
+      },
+      {
+        title: 'Pastebin / Gist / GitHub Leaks',
+        query: 'site:pastebin.com "{TARGET}" ("password" | "secret" | "api_key" | "BEGIN RSA PRIVATE KEY" | "DB_PASSWORD") | site:gist.github.com "{TARGET}" ("password" | "secret" | "api_key" | "BEGIN RSA PRIVATE KEY") | site:github.com "{TARGET}" ("password" | "secret" | "api_key" | "BEGIN RSA PRIVATE KEY" | "AKIA" | "DB_PASSWORD")',
+        icon: '📋', platforms: ['google']
+      },
+      {
+        title: 'PII & Data Leaks (CSV, XLS, SQL)',
+        query: 'site:{TARGET} (filetype:csv | filetype:xls | filetype:xlsx | filetype:sql) ("email" "password" | "ssn" | "credit_card" | "card_number" | "INSERT INTO" "password")',
+        icon: '📊', platforms: ['google']
+      },
+    ],
+    high: [
+      {
+        title: 'SQL Dumps & Database Backups',
+        query: 'site:{TARGET} (ext:sql | ext:dump | ext:sql.gz | intitle:"index of" ".sql" | intitle:"index of" ".dump" | inurl:"/backup" intitle:"index of" | inurl:"/db_backup" | "backup" ext:zip | "dump" ext:zip)',
+        icon: '🗃️', platforms: ['google']
+      },
+      {
+        title: 'Admin & Management Panels',
+        query: 'site:{TARGET} (inurl:"/admin/" | inurl:"/administrator/" | intitle:"admin panel" | intitle:"admin login" | inurl:"/wp-admin/" | inurl:"/cpanel" | inurl:"/webmail" | inurl:"/plesk" | inurl:"/directadmin" | inurl:"/dashboard" intitle:"dashboard" | intitle:"phpMyAdmin" | inurl:"/adminer.php" | intitle:"Adminer")',
+        icon: '🛡️', platforms: ['google']
+      },
+      {
+        title: 'DevOps Tools (Jenkins, Grafana, Kibana, Elasticsearch, etc.)',
+        query: 'site:{TARGET} (inurl:":8080" intitle:"Jenkins" | intitle:"Jenkins" "Build History" | inurl:":5601" intitle:"Kibana" | inurl:":9200" "Elasticsearch" | inurl:":3000" intitle:"Grafana" | intitle:"Traefik" "dashboard" | inurl:":9000" intitle:"SonarQube" | intitle:"Portainer" | intitle:"Webmin" | inurl:"/zabbix/" | inurl:"/nagios/")',
+        icon: '👷', platforms: ['google']
+      },
+      {
+        title: 'Exposed .git / .svn / Version Control',
+        query: 'site:{TARGET} (inurl:"/.git/HEAD" | inurl:"/.git/config" | intitle:"index of" ".git" | inurl:"/.svn/entries" | intitle:"index of" ".svn" | inurl:"/.hg/hgrc" | inurl:"/CVS/Root")',
+        icon: '🔀', platforms: ['google']
+      },
+      {
+        title: 'Cloud Storage Misconfigs',
+        query: 'site:s3.amazonaws.com "{TARGET}" | site:blob.core.windows.net "{TARGET}" | site:storage.googleapis.com "{TARGET}" | site:digitaloceanspaces.com "{TARGET}" | site:firebasestorage.googleapis.com "{TARGET}" | site:*.s3.amazonaws.com "{TARGET}"',
+        icon: '🪣', platforms: ['google']
+      },
+      {
+        title: 'Server Status & phpinfo()',
+        query: 'site:{TARGET} (inurl:"/server-status" "Apache" | inurl:"/server-info" "Apache" | inurl:"/nginx_status" | ext:php intitle:"phpinfo()" "PHP Version" | inurl:"info.php" intitle:"phpinfo" | inurl:"test.php" intitle:"phpinfo" | "PHP Version" "System" "Build Date")',
+        icon: '🖥️', platforms: ['google']
+      },
+      {
+        title: 'Kubernetes / Docker / Terraform Secrets',
+        query: 'site:{TARGET} (inurl:"docker-compose.yml" | inurl:"Dockerfile" "password" | inurl:"kubernetes" ext:yml ("password" | "secret") | inurl:"terraform.tfvars" | inurl:".tfstate" | inurl:"ansible" ext:yml "password" | inurl:"Vagrantfile" "password")',
+        icon: '🐳', platforms: ['google']
+      },
+      {
+        title: 'Log Files with Secrets',
+        query: 'site:{TARGET} (ext:log "password" | ext:log "Authorization" | ext:log "Bearer" | ext:log "api_key" | ext:log "access_token" | intitle:"index of" "error.log" | intitle:"index of" "debug.log")',
+        icon: '📜', platforms: ['google']
+      },
+    ],
+    medium: [
+      {
+        title: 'SQL & Application Errors (Stack Traces)',
+        query: 'site:{TARGET} ("SQL syntax error" | "ORA-" "error" | "SQLSTATE" | "Warning: mysql_" | "Warning: pg_" | "Traceback (most recent call last)" | "Fatal error:" | "unhandled exception" | "stack trace" "at " | "NullPointerException" | "ActiveRecord::RecordNotFound" | "NoMethodError")',
+        icon: '❗', platforms: ['google']
+      },
+      {
+        title: 'Debug & Development Pages',
+        query: 'site:{TARGET} (inurl:"/debug" intitle:"debug" | inurl:"/_debugbar" | inurl:"/telescope" | intitle:"Whoops!" | intitle:"Symfony Exception" | inurl:"/_profiler" | inurl:"?debug=true" | inurl:"?env=dev" | inurl:"/staging" | intitle:"Development" "test")',
+        icon: '🔍', platforms: ['google']
+      },
+      {
+        title: 'API Documentation (Swagger, GraphQL, OpenAPI)',
+        query: 'site:{TARGET} (inurl:"/swagger-ui" | inurl:"/api-docs" | inurl:"/openapi.json" | inurl:"/openapi.yaml" | inurl:"/graphql" | inurl:"/graphiql" | inurl:"/api/v1" | inurl:"/api/explorer" | inurl:"/.well-known/openid-configuration")',
+        icon: '📋', platforms: ['google']
+      },
+      {
+        title: 'Open Redirect Parameters',
+        query: 'site:{TARGET} (inurl:"?redirect=" inurl:"http" | inurl:"?url=" inurl:"http" | inurl:"?return=" inurl:"http" | inurl:"?next=" inurl:"http" | inurl:"?redir=" inurl:"http" | inurl:"?continue=" inurl:"http" | inurl:"?target=" inurl:"http" | inurl:"?goto=" inurl:"http" | inurl:"?destination=" inurl:"http" | inurl:"?callback=" inurl:"http" | inurl:"?uri=" inurl:"http" | inurl:"?location=" inurl:"http")',
+        icon: '↪️', platforms: ['google']
+      },
+      {
+        title: 'SQLi / LFI / Parameter Candidates',
+        query: 'site:{TARGET} (inurl:"?id=" inurl:& | inurl:"?page=" inurl:& | inurl:"?file=" inurl:& | inurl:"?include=" inurl:& | inurl:"?path=" inurl:& | inurl:"?view=" inurl:& | inurl:"?cat=" inurl:& | inurl:"?action=" inurl:& | inurl:"?cmd=" inurl:& | inurl:"?query=" inurl:& | ext:php inurl:"?id=" | inurl:"index.php?id=")',
+        icon: '💉', platforms: ['google']
+      },
+      {
+        title: 'Backup & Temp Files (.bak, .old, .swp, ~)',
+        query: 'site:{TARGET} (ext:bak | ext:old | ext:backup | ext:save | ext:swp | ext:orig | ext:tmp | ext:~ | intitle:"index of" ".bak" | intitle:"index of" ".old" | "backup" intitle:"index of")',
+        icon: '🕰️', platforms: ['google']
+      },
+      {
+        title: 'Spring Boot Actuators & Health Endpoints',
+        query: 'site:{TARGET} (inurl:"/actuator" | inurl:"/actuator/env" | inurl:"/actuator/health" | inurl:"/actuator/mappings" | inurl:"/metrics" | inurl:"/__health" | inurl:"/_health" | inurl:"/info" "version")',
+        icon: '🍃', platforms: ['google']
+      },
+    ],
+    low: [
+      {
+        title: 'Login Portals (admin, SSO, OAuth)',
+        query: 'site:{TARGET} (inurl:"login" | inurl:"signin" | intitle:"admin login" | inurl:"/account/login" | inurl:"/sso/" | inurl:"/saml/" | inurl:"/cas/login" | inurl:"/oauth/authorize" | inurl:"/openid-connect")',
+        icon: '🚪', platforms: ['google']
+      },
+      {
+        title: 'Sensitive Documents (PDF, DOC, XLS)',
+        query: 'site:{TARGET} (filetype:pdf "confidential" | filetype:doc "confidential" | filetype:xls "password" | filetype:txt "password" "username")',
+        icon: '📎', platforms: ['google']
+      },
+      {
+        title: 'Technology Version Disclosures',
+        query: 'site:{TARGET} ("Powered by WordPress" | "generator" "Drupal" | "generator" "Joomla" | "Magento" "version" | "Powered by vBulletin" | "X-Powered-By: PHP" | "X-Powered-By: ASP.NET" | "Powered by WooCommerce" | "generator" "Gatsby")',
+        icon: 'ℹ️', platforms: ['google']
+      },
+      {
+        title: 'Directory Listings',
+        query: 'site:{TARGET} (intitle:"index of" | "parent directory" intitle:"index of" | intitle:"index of" "last modified")',
+        icon: '📂', platforms: ['google']
+      },
+      {
+        title: 'Robots, Sitemap, Security.txt',
+        query: 'site:{TARGET} (inurl:"robots.txt" | inurl:"sitemap.xml" | inurl:".well-known/security.txt" | inurl:"humans.txt" | inurl:"ads.txt")',
+        icon: '🤖', platforms: ['google']
+      },
+      {
+        title: 'Collaboration Tools (Jira, Confluence, GitLab, SharePoint)',
+        query: 'site:{TARGET} (intitle:"Confluence" | intitle:"System Dashboard" "Jira" | intitle:"Sign in · GitLab" | inurl:"/owa/" intitle:"Outlook" | "SharePoint" "AllItems.aspx" | intitle:"Mattermost" | intitle:"Rocket.Chat")',
+        icon: '📌', platforms: ['google']
+      },
+      {
+        title: 'Network Devices / IoT',
+        query: 'site:{TARGET} (intitle:"Network Camera" | intitle:"WebcamXP" | intitle:"RouterOS" "MikroTik" | intitle:"pfSense" | intitle:"Fortinet" | intitle:"SonicWall")',
+        icon: '📡', platforms: ['google']
+      },
+    ],
+    info: [
+      {
+        title: 'Subdomain Discovery (Google)',
+        query: 'site:*.' + '{TARGET}' + ' -www -mail -ftp | site:*.*.{TARGET}',
+        icon: '🌐', platforms: ['google']
+      },
+      {
+        title: 'Certificate Transparency (crt.sh)',
+        query: 'https://crt.sh/?q=%25.{TARGET}',
+        icon: '📜', platforms: ['crtsh']
+      },
+      {
+        title: 'Wayback Machine – All URLs',
+        query: 'https://web.archive.org/cdx/search/cdx?url=*.{TARGET}/*&output=text&fl=original&collapse=urlkey',
+        icon: '🏛️', platforms: ['wayback']
+      },
+      {
+        title: 'Wayback – Sensitive File Types',
+        query: 'https://web.archive.org/cdx/search/cdx?url=*.{TARGET}/*&collapse=urlkey&output=text&fl=original&filter=original:.*\\.(xls|xml|xlsx|json|pdf|sql|doc|docx|pptx|txt|git|zip|tar\\.gz|tgz|bak|7z|rar|log|cache|secret|db|backup|yml|gz|config|csv|yaml|md|md5|exe|dll|bin|ini|bat|sh|tar|deb|rpm|iso|img|env|apk|msi|dmg|tmp|crt|pem|key|pub|asc)',
+        icon: '📚', platforms: ['wayback']
+      },
+      {
+        title: 'Shodan Hostname & Org Search',
+        query: 'https://www.shodan.io/search?query=hostname%3A%22{TARGET}%22 | https://www.shodan.io/search?query=org%3A%22{TARGET}%22 | https://www.shodan.io/search?query=ssl%3A%22{TARGET}%22',
+        icon: '🛰️', platforms: ['shodan']
+      },
+      {
+        title: 'GitHub Code & Secrets',
+        query: 'https://github.com/search?q=%22{TARGET}%22+%28password+OR+secret+OR+api_key+OR+token+OR+credentials+OR+BEGIN+RSA+PRIVATE+KEY%29&type=code',
+        icon: '🐙', platforms: ['github']
+      },
+      {
+        title: 'GitLab / Bitbucket / Sourcegraph',
+        query: 'site:gitlab.com "{TARGET}" ("password" | "secret" | "token" | "BEGIN RSA PRIVATE KEY") | site:bitbucket.org "{TARGET}" ("password" | "secret") | site:sourcegraph.com "{TARGET}" "password"',
+        icon: '🦊', platforms: ['google']
+      },
+      {
+        title: 'Package Managers (npm, PyPI, RubyGems, etc.)',
+        query: 'site:{TARGET} (inurl:"package.json" | inurl:"composer.json" | inurl:"requirements.txt" | inurl:"Pipfile" | inurl:"go.mod" | inurl:"pom.xml" | inurl:"Gemfile" | inurl:".npmrc" "authToken" | inurl:".pypirc" "password")',
+        icon: '📦', platforms: ['google']
+      },
+      {
+        title: 'Email Discovery',
+        query: 'site:{TARGET} ("mailto:" "@{TARGET}" | "contact" "@{TARGET}" | "@{TARGET}" ext:txt)',
+        icon: '📧', platforms: ['google']
+      },
+      {
+        title: 'Analytics & Tracking IDs',
+        query: 'site:{TARGET} ("UA-" "google-analytics.com" | "GTM-" "googletagmanager.com" | "G-" "googletagmanager.com" | "fbq(" "facebook" | "hotjar" | "mixpanel")',
+        icon: '📈', platforms: ['google']
+      },
+      {
+        title: 'Cloud Subdomain Footprint (Heroku, Vercel, Netlify, Workers)',
+        query: 'site:{TARGET} (inurl:".cloudfront.net" | inurl:".elb.amazonaws.com" | inurl:".azurewebsites.net" | inurl:".herokuapp.com" | inurl:".vercel.app" | inurl:".netlify.app" | inurl:".pages.dev" | inurl:".workers.dev")',
+        icon: '☁️', platforms: ['google']
+      },
+      {
+        title: 'Bug Bounty / Write-ups Mentions',
+        query: 'site:hackerone.com "{TARGET}" | site:bugcrowd.com "{TARGET}" | site:medium.com "{TARGET}" "writeup" | site:cve.mitre.org "{TARGET}" | site:exploit-db.com "{TARGET}"',
+        icon: '🐞', platforms: ['google']
+      },
+    ]
+  };
+
+  /* ---------- SECTION ORDER ---------- */
+  const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
+  const SEV_CLASS = {
+    critical: 'sev-critical',
+    high: 'sev-high',
+    medium: 'sev-medium',
+    low: 'sev-low',
+    info: 'sev-info'
+  };
+
+  /* ---------- render dorks ---------- */
+  function renderDorks(target) {
+    if (!target) target = targetInput.value.trim() || 'target.com';
+     const cleanTarget = sanitizeDomain(target);   // ← add this line
+    let html = '';
+    for (const sev of SEV_ORDER) {
+      const dorks = DORKS[sev];
+      if (!dorks || dorks.length === 0) continue;
+      const sevLabel = sev.charAt(0).toUpperCase() + sev.slice(1);
+      html += `<div class="sev-head ${SEV_CLASS[sev]}">${sevLabel}</div><div class="dork-grid">`;
+      dorks.forEach(d => {
+        let query = d.query.replace(/\{TARGET\}/g, cleanTarget);
+        // For Google dorks, prepend Google search URL unless it already contains http
+        let url;
+        if (d.platforms.includes('google') && !query.startsWith('http')) {
+          url = `https://www.google.com/search?q=${esc(query)}`;
+        } else if (d.platforms.includes('google') && query.startsWith('http')) {
+          url = query;
+        } else if (d.platforms.includes('crtsh') || d.platforms.includes('wayback') || d.platforms.includes('shodan') || d.platforms.includes('github')) {
+          url = query; // already a full URL
+        } else {
+          url = `https://www.google.com/search?q=${esc(query)}`;
+        }
+        const badgesHtml = d.platforms.map(p => {
+          let cls = '';
+          if (p === 'google') cls = 'badge-google';
+          else if (p === 'github') cls = 'badge-github';
+          else if (p === 'shodan') cls = 'badge-shodan';
+          else if (p === 'wayback') cls = 'badge-wayback';
+          else if (p === 'crtsh') cls = 'badge-crtsh';
+          return `<span class="badge ${cls}">${p}</span>`;
+        }).join('');
+        html += `
+          <a href="${url}" target="_blank" rel="noopener" class="dork-card">
+            <div class="dork-title"><span class="icon-circle">${d.icon}</span>${d.title}</div>
+            <div class="dork-query">${d.query.replace(/\{TARGET\}/g, cleanTarget)}</div>
+            <div class="platform-badges">${badgesHtml}</div>
+          </a>`;
+      });
+      html += `</div>`;
+    }
+    dorksContainer.innerHTML = html;
+    renderQuickAccess(cleanTarget);
+  }
+
+  function renderQuickAccess(target) {
+    quickAccessRow.innerHTML = `
+      <a href="https://www.google.com/search?q=site%3A${esc(target)}" target="_blank" rel="noopener"><span>🔍</span> Google site:${target}</a>
+      <a href="https://github.com/search?q=%22${esc(target)}%22&type=code" target="_blank" rel="noopener"><span>🐙</span> GitHub Code</a>
+      <a href="https://www.shodan.io/search?query=hostname%3A%22${esc(target)}%22" target="_blank" rel="noopener"><span>🛰️</span> Shodan</a>
+      <a href="https://crt.sh/?q=%25.${esc(target)}" target="_blank" rel="noopener"><span>📜</span> crt.sh</a>
+      <a href="https://web.archive.org/cdx/search/cdx?url=*.${esc(target)}/*&output=text&fl=original&collapse=urlkey" target="_blank" rel="noopener"><span>🏛️</span> Wayback URLs</a>
+      <a href="https://securityheaders.com/?q=${esc(target)}&followRedirects=on" target="_blank" rel="noopener"><span>🛡️</span> Security Headers</a>
+      <a href="https://www.openbugbounty.org/search/?search=${esc(target)}" target="_blank" rel="noopener"><span>🐞</span> OpenBugBounty</a>
+      <a href="https://publicwww.com/websites/%22${esc(target)}%22/" target="_blank" rel="noopener"><span>📄</span> PublicWWW</a>
+    `;
+  }
+
+  /* ---------- events ---------- */
+  applyBtn.addEventListener('click', () => {
+    const val = sanitizeDomain(targetInput.value);
+    if (!val) return;
+    renderDorks(val);
+  });
+  targetInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      const val = sanitizeDomain(targetInput.value); // ← sanitize here      if (!val) return;
+      renderDorks(val);
+    }
+  });
+
+  /* ---------- initial render ---------- */
+  renderDorks();
+})();
+</script>
+</body>
+</html>
