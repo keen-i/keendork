@@ -10,7 +10,7 @@
 
 ## 🚀 Quick Start
 
-Download the repository and open index.html directly in any modern browser.
+Download the repository and open keendork.html directly in any modern browser.
 
 
 1. Enter your target domain in the input field
